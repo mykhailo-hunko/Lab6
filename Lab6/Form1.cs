@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -23,6 +24,53 @@ namespace Lab6
             inizialazeList();
             inizDrop();
             cash_text.Text = cash.ToString();
+            toThread();
+        }
+
+        private void toThread()
+        {
+            System.Timers.Timer timer = new System.Timers.Timer();
+            timer.Elapsed += new System.Timers.ElapsedEventHandler(sells);
+            timer.Interval = 1000 * 30; // 30 seconds
+            timer.Start();
+           
+        }
+
+        private void inThread(Label cash, Label amount, List<Product> products, double cash1)
+        {
+            Random rnd = new Random();
+            Product pr = products[rnd.Next(0, 5)];
+            pr.amount--;
+            cash1 -= pr.price_sell;
+            cash.Text = cash1.ToString();
+            amount.Text = pr.amount.ToString();
+            MessageBox.Show("Было продано в другом потоке: \nПродукт: " + pr.name + "\nКоличество: 1 \nИтого: " + pr.price_sell);
+        } 
+
+        private void sells(object sender, EventArgs e)
+        {
+            Thread thread = new Thread(
+               delegate ()
+               {
+                  
+                   Action action = () =>
+                   {
+                       inThread(cash_text, amount_product, products, cash);
+                   };
+
+                   if (InvokeRequired)
+                   {
+                       Invoke(action);
+                   } else
+                   {
+                       action();
+                   }
+               }
+
+               );
+
+            thread.Start();
+
         }
 
         private void inizDrop()
