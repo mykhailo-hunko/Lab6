@@ -164,6 +164,7 @@
             this.toXML.TabIndex = 11;
             this.toXML.Text = "Переучет";
             this.toXML.UseVisualStyleBackColor = true;
+            this.toXML.Click += new System.EventHandler(this.toXML_Click);
             // 
             // fromXML
             // 
@@ -174,6 +175,7 @@
             this.fromXML.TabIndex = 12;
             this.fromXML.Text = "Отчет о продажах";
             this.fromXML.UseVisualStyleBackColor = true;
+            this.fromXML.Click += new System.EventHandler(this.fromXML_Click);
             // 
             // pay
             // 

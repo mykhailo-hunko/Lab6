@@ -3,21 +3,25 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Serialization;
 
 namespace Lab6
 {
     public partial class Form1 : Form
     {
-        List<Product> products = new List<Product>();
+       public List<Product> products = new List<Product>();
         Product selectedProduct;
         double resultSum = 0;
         double amount;
-        double cash = 1000;
+        double cash = 10000;
+        double[] sumAndAmountXML = { 0, 0 };
+       
         public Form1()
         {
             InitializeComponent();
@@ -42,13 +46,15 @@ namespace Lab6
             Product pr = products[rnd.Next(0, 5)];
             pr.amount--;
             cash1 -= pr.price_sell;
-            cash.Text = cash1.ToString();
-            amount.Text = pr.amount.ToString();
+            cash.Text = Math.Round(cash1, 2).ToString();
+            amount.Text = Math.Round(pr.amount, 2).ToString();
+           
             MessageBox.Show("Было продано в другом потоке: \nПродукт: " + pr.name + "\nКоличество: 1 \nИтого: " + pr.price_sell);
         } 
 
         private void sells(object sender, EventArgs e)
         {
+            sumAndAmountXML[1]++;
             Thread thread = new Thread(
                delegate ()
                {
@@ -100,7 +106,6 @@ namespace Lab6
             selectedProduct = products[drop_list.SelectedIndex];
             amount_product.Text = selectedProduct.amount.ToString();
             Double.TryParse(text_amount.Text, out amount);
-
             sumText.Text = (amount * selectedProduct.price_sell).ToString();
         }
 
@@ -109,7 +114,7 @@ namespace Lab6
             
             Double.TryParse(text_amount.Text, out amount);
             
-            sumText.Text = (amount * selectedProduct.price_sell).ToString();
+            sumText.Text = Math.Round((amount * selectedProduct.price_sell),2).ToString();
         }
 
         private void add_to_bin_Click(object sender, EventArgs e)
@@ -124,8 +129,8 @@ namespace Lab6
             {
                 selectedProduct.amount -= amount;
                 resultSum += sum;
-                amount_product.Text = selectedProduct.amount.ToString();
-                sum_in_bin.Text = resultSum.ToString();
+                amount_product.Text = Math.Round(selectedProduct.amount, 2).ToString();
+                sum_in_bin.Text = Math.Round(resultSum, 2).ToString();
             }
         }
 
@@ -136,7 +141,70 @@ namespace Lab6
             text_amount.Text = "";
             MessageBox.Show("Оплата произведена успешно!");
             cash_text.Text = cash.ToString();
+            sumAndAmountXML[1]++;
+            sumAndAmountXML[0] += resultSum;
+            resultSum = 0;
 
+        }
+
+        private void toXML_Click(object sender, EventArgs e)
+        {
+            XmlSerializer formatter = new XmlSerializer(typeof(List<Product>));
+            XmlSerializer formatter2 = new XmlSerializer(typeof(double[]));
+            // получаем поток, куда будем записывать сериализованный объект
+            using (FileStream fs = new FileStream(@"D:\products.xml", FileMode.Truncate))
+            {
+               
+                formatter.Serialize(fs, products);
+            }
+
+            using (FileStream fs = new FileStream(@"D:\other.xml", FileMode.Truncate))
+            {
+                formatter2.Serialize(fs, sumAndAmountXML);
+            }
+
+            foreach (Product pr in products)
+            {
+                pr.amount += 9;
+                cash -= 9 * pr.price_buy;
+                if (cash < 0)
+                {
+                    cash += 9 * pr.price_buy;
+                    break;
+                }
+            }
+
+            inizDrop();
+            cash_text.Text = Math.Round(cash, 2).ToString();
+        }
+
+        private void fromXML_Click(object sender, EventArgs e)
+        {
+
+            XmlSerializer formatter = new XmlSerializer(typeof(List<Product>));
+            XmlSerializer formatter2 = new XmlSerializer(typeof(double[]));
+            string str = "Товары по состояни. на прошлый переучет: ";
+
+            using (FileStream fs = new FileStream(@"D:\products.xml", FileMode.Open))
+            {
+                List<Product> productsTemp = (List<Product>)formatter.Deserialize(fs);
+               
+                foreach (Product pr in productsTemp)
+                {
+                    str += $"\nПродукт: {pr.name}\nКоличество: {pr.amount}";
+                }
+               
+
+                inizDrop();
+            }
+            using (FileStream fs = new FileStream(@"D:\other.xml", FileMode.Open))
+            {
+                double[] sumAndAmountXMLTemp = (double[])formatter2.Deserialize(fs);
+                str += $"\nЗа все время было продано на: {sumAndAmountXMLTemp[0]}\nЗа все время магазин посетило: {sumAndAmountXMLTemp[1]} людей";
+
+            }
+
+            MessageBox.Show(str);
         }
     }
 }
